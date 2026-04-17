@@ -2,6 +2,11 @@ from csv import *
 import json
 from datetime import datetime
 import os
+from pathlib import Path
+
+rutaBase = Path(__file__).parent
+ruta = rutaBase/"reports"
+
 
 if not os.path.exists("reports"):
     os.makedirs("reports")
@@ -74,7 +79,7 @@ def producto_mas_vendido(fecha_inicio, fecha_fin):
         "cantidad": conteo[mas_vendido]
     }
 
-    with open("reports/reporte.json", "w") as f:
+    with open(ruta/"reporte.json", "w") as f:
         json.dump(data, f, indent=4)
 
 while True:
@@ -196,11 +201,14 @@ while True:
     elif Opcion == 6:
         id_cliente = int(input("Ingrese ID: "))
 
-        if id_cliente == Cliente_Actual.get("Identificacion"):
+        with open("Clientes.csv","r",newline="",encoding="utf-8") as file:
+            listaClientes = list(DictReader(file))
+        Cliente_Actual = next((cliente for cliente in listaClientes if str(id_cliente) == cliente["Identificacion"]), None)
+        if Cliente_Actual:
             print("Cliente encontrado:")
-            print(Cliente_Actual)
+            print(Cliente_Actual["Nombre"])
         else:
-            print("No existe")
+            print("Ese cliente no existe")
 
     elif Opcion == 7:
         for v in ventas:
