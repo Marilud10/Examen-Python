@@ -1,10 +1,15 @@
 from csv import *
 import json
+from datetime import datetime
+import os
+
+if not os.path.exists("reports"):
+    os.makedirs("reports")
+
 with open("Platillos.csv","a"):
     pass
 with open ("Bebidas.csv", "a"):
     pass
-
 
 platillos = [  
     {"id":"01", "Nombre": "Arroz de coco", "Precio": 20000},
@@ -30,12 +35,47 @@ mesas = [
     {"id":"m5", "Nombre": "Mesa Rincon", "sillas": 2}
 ]
 
-
-ventas = list()
+ventas = []
+detalle_ventas = []
 total = 0
 Cliente_Actual = dict()
 Mesa_Actual = None
 
+def producto_mas_vendido(fecha_inicio, fecha_fin):
+    inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d")
+    fin = datetime.strptime(fecha_fin, "%Y-%m-%d")
+
+    conteo = {}
+
+    for venta in detalle_ventas:
+        fecha = datetime.strptime(venta["fecha"], "%Y-%m-%d")
+
+        if inicio <= fecha <= fin:
+            nombre = venta["producto"]
+
+            if nombre in conteo:
+                conteo[nombre] += 1
+            else:
+                conteo[nombre] = 1
+
+    if len(conteo) == 0:
+        print("No hay ventas en ese rango")
+        return
+
+    mas_vendido = max(conteo, key=conteo.get)
+
+    print("\nProducto más vendido:")
+    print("Nombre:", mas_vendido)
+    print("Cantidad:", conteo[mas_vendido])
+
+    data = {
+        "fecha_consulta": datetime.now().strftime("%Y-%m-%d"),
+        "producto": mas_vendido,
+        "cantidad": conteo[mas_vendido]
+    }
+
+    with open("reports/reporte.json", "w") as f:
+        json.dump(data, f, indent=4)
 
 while True:
     print("\n----Bienvenido al restaurante Don Sebas----")
@@ -47,11 +87,10 @@ while True:
     print("6. Buscar Cliente")
     print("7. Registro de Ventas")
     print("8. Agregar Datos")
+    print("9. Reporte producto más vendido")
     print("0. Salir")
 
     Opcion = int(input("Digite su opción: "))
-
-
 
     if Opcion == 1:
         Nombre = input("Nombre: ")
@@ -60,12 +99,12 @@ while True:
         Email = input("Email: ")
 
         cliente = {"Identificacion":idCliente,"Nombre":Nombre,"Teléfono":Telefono,"Email":Email}
+        Cliente_Actual = cliente
 
         with open("Clientes.csv","a",newline="",encoding="utf-8") as file:
             writerCSV = DictWriter(file,fieldnames=["Identificacion","Nombre","Teléfono","Email"])
             writerCSV.writeheader()
             writerCSV.writerows([cliente])
-
 
     elif Opcion == 2:
         for mesa in mesas:
@@ -78,179 +117,127 @@ while True:
                 Mesa_Actual = mesa
                 print("Mesa seleccionada:", mesa["Nombre"])
 
-
-
     elif Opcion == 3:
         try:
             with open("Platillos.csv", "r", newline="", encoding="utf-8") as file:
                 platillos = list(DictReader(file))
 
-            if len(platillos) == 0:
-                print("No hay platillos registrados")
-            else:
-                for plato in platillos:
-                    print(plato["Código"], plato["Nombre"], plato["Precio"])
+            for plato in platillos:
+                print(plato["Código"], plato["Nombre"], plato["Precio"])
 
-                opcion_plato = input("Seleccione: ")
+            opcion_plato = input("Seleccione: ")
 
-                encontrado = False
-                for plato in platillos:
-                    if plato["Código"] == opcion_plato:
-                        total += float(plato["Precio"])
-                        print("Agregado:", plato["Nombre"])
-                        encontrado = True
+            for plato in platillos:
+                if plato["Código"] == opcion_plato:
+                    total += float(plato["Precio"])
+                    detalle_ventas.append({
+                        "producto": plato["Nombre"],
+                        "fecha": datetime.now().strftime("%Y-%m-%d")
+                    })
+                    print("Agregado:", plato["Nombre"])
 
-                if not encontrado:
-                    print("Platillo no encontrado")
-        except FileNotFoundError:
-            print("El archivo Platillos.csv no existe")
-
-
+        except:
+            print("Error en platillos")
 
     elif Opcion == 4:
         try:
             with open("Bebidas.csv", "r", newline="", encoding="utf-8") as file:
                 bebidas = list(DictReader(file))
 
-            if len(bebidas) == 0:
-                print("No hay bebidas registradas")
-            else:
-                for bebida in bebidas:
-                    print(bebida["Código"], bebida["Nombre"], bebida["Precio"])
+            for bebida in bebidas:
+                print(bebida["Código"], bebida["Nombre"], bebida["Precio"])
 
             opcion_bebida = input("Seleccione: ")
 
-            encontrado = False
             for bebida in bebidas:
                 if bebida["Código"] == opcion_bebida:
                     total += float(bebida["Precio"])
+                    detalle_ventas.append({
+                        "producto": bebida["Nombre"],
+                        "fecha": datetime.now().strftime("%Y-%m-%d")
+                    })
                     print("Agregado:", bebida["Nombre"])
-                    encontrado = True
 
-            if not encontrado:
-                print("Bebida no encontrada")
-
-        except FileNotFoundError:
-            print("El archivo Bebidas.csv no existe")
-
-
+        except:
+            print("Error en bebidas")
 
     elif Opcion == 5:
         if Cliente_Actual == dict() or Mesa_Actual is None:
             print("Debe seleccionar cliente y mesa")
         else:
             subtotal = total
-            iva = subtotal * 0.19
-            total_pagar = subtotal + iva
-        def facturar_con_descuento():
-           
-            mesa = input("Ingrese código de mesa: ")
-        cliente = input("Ingrese nombre del cliente: ")
-    
-        total = float(input("Ingrese total de la cuenta: "))
-    
-    
-        while True:
-            descuento = float(input("Ingrese porcentaje de descuento (0-50): "))
-            if 0 <= descuento <= 50:
-                 break
-        else:
-             print("Descuento invalido. Debe de estar entre 0% y 50%")
+            descuento = float(input("Ingrese descuento (0 a 50): "))
 
-    monto_descuento = total * (descuento / 100)
-    total_final = total - monto_descuento
+            if descuento < 0 or descuento > 50:
+                print("Descuento inválido")
+            else:
+                descuento_valor = subtotal * (descuento / 100)
+                subtotal_con_descuento = subtotal - descuento_valor
+                iva = subtotal_con_descuento * 0.19
+                total_pagar = subtotal_con_descuento + iva
 
-    
-    monto_descuento = total * (descuento / 100)
-    total_final = total - monto_descuento
-    print("\n--- FACTURA ---")
-    print(f"Mesa: {mesa}")
-    print(f"Cliente: {cliente}")
-    print(f"Total sin descuento: ${total:.2f}")
-    print(f"Descuento aplicado: {descuento}% (-${monto_descuento:.2f})")
-    print(f"Total con descuento: ${total_final:.2f}")
+                print("\n----- FACTURA -----")
+                print("Cliente:", Cliente_Actual["Nombre"])
+                print("Mesa:", Mesa_Actual["Nombre"])
+                print("Subtotal:", subtotal)
+                print("Descuento:", descuento)
+                print("Total con descuento:", subtotal_con_descuento)
+                print("IVA:", iva)
+                print("Total:", total_pagar)
 
-    factura = {
-        "mesa": mesa,
-        "cliente": cliente,
-        "total_original": total,
-        "descuento_porcentaje": descuento,
-        "descuento_monto": monto_descuento,
-        "total_final": total_final
-    }
-
-    
-    with open("factura_descuento.json", "w") as archivo:
-        json.dump(factura, archivo, indent=4)
-
-    print("\nFactura guardada en 'factura_descuento.json'")
-    print("\n----- FACTURA -----")
-    print("Cliente:", Cliente_Actual["nombre"])
-    print("Mesa:", Mesa_Actual["Nombre"])
-    print("Subtotal:", subtotal)
-    print("IVA:", iva)
-    print("Total:", total_pagar)
-    print(f"Total sin descuento: ${total:.2f}")
-    print(f"Descuento aplicado: {descuento}% (-${monto_descuento:.2f})")
-    print(f"Total con descuento: ${total_final:.2f}")
-    ventas.append({
-                "cliente": Cliente_Actual["nombre"],
-                "mesa": Mesa_Actual["Nombre"],
-                "total": total_pagar
+                ventas.append({
+                    "cliente": Cliente_Actual["Nombre"],
+                    "mesa": Mesa_Actual["Nombre"],
+                    "total": total_pagar
                 })
+
+                total = 0
+
     elif Opcion == 6:
-    id_cliente = int(input("Ingrese ID: "))
+        id_cliente = int(input("Ingrese ID: "))
 
-    if id_cliente in cliente:
+        if id_cliente == Cliente_Actual.get("Identificacion"):
             print("Cliente encontrado:")
-            print(cliente[id_cliente])
+            print(Cliente_Actual)
         else:
-            print("No existe") 
-    elif Opcion == "7":
-        if len(ventas) == 0:
-           print("No hay ventas")
-        else:
-            total_general = 0
+            print("No existe")
 
-            for v in ventas:
-                print(v)
-                total_general += v["total"]
+    elif Opcion == 7:
+        for v in ventas:
+            print(v)
 
-            print("TOTAL GENERAL:", total_general)
-    elif Opcion == "8":
-    print("Agregar Datos")
-    print("1.Platillos")
-    print("2.bebidas")
-    print("3.Mesas")
-    tipo= input("Su Opcion elegida es: ")
-    if tipo == "1": 
-            Id_plato = input("Id Del Platillo: ")
-            nombre = input("Ingrese el platillo: ")
+    elif Opcion == 8:
+        print("1.Platillos")
+        print("2.Bebidas")
+        tipo= input("Opción: ")
+
+        if tipo == "1":
+            Id_plato = input("Id: ")
+            nombre = input("Nombre: ")
             precio = int(input("Precio: "))
-
-            platillo = {"Código": Id_plato, "Nombre": nombre, "Precio": precio}
-            campos = ["Código", "Nombre", "Precio"]
 
             with open("Platillos.csv", "a", newline="", encoding="utf-8") as file:
-                writerCSV = DictWriter(file, fieldnames=campos)
+                writerCSV = DictWriter(file, fieldnames=["Código","Nombre","Precio"])
                 writerCSV.writeheader()
-                writerCSV.writerow(platillo)
-    elif tipo == "2": 
-            Id_bebida = input("Id De la Bebida: ")
-            nombre = input("Ingrese la bebida: ")
+                writerCSV.writerow({"Código":Id_plato,"Nombre":nombre,"Precio":precio})
+
+        elif tipo == "2":
+            Id_bebida = input("Id: ")
+            nombre = input("Nombre: ")
             precio = int(input("Precio: "))
 
-            bebida = {"Código": Id_bebida, "Nombre": nombre, "Precio": precio}
-            campos = ["Código", "Nombre", "Precio"]
-
             with open("Bebidas.csv", "a", newline="", encoding="utf-8") as file:
-                writerCSV = DictWriter(file, fieldnames=campos)
+                writerCSV = DictWriter(file, fieldnames=["Código","Nombre","Precio"])
                 writerCSV.writeheader()
-                writerCSV.writerow(bebida)
-    elif tipo == "3": 
-            Id_mesa = input("ID de la nueva mesa: ")
-            nombrem= input("Nombre de la mesa: ")
-            mesas.append({"ID": Id_mesa, "Nombre": nombrem})
-            print("¡Mesa agregada correctamente!")
+                writerCSV.writerow({"Código":Id_bebida,"Nombre":nombre,"Precio":precio})
+
+    elif Opcion == 9:
+        fi = input("Fecha inicio (YYYY-MM-DD): ")
+        ff = input("Fecha fin (YYYY-MM-DD): ")
+        producto_mas_vendido(fi, ff)
+
+    elif Opcion == 0:
+        break
+
     else:
-            print("Opcion Invalida")
+        print("Opción inválida")
